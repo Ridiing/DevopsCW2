@@ -21,7 +21,7 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    docker build -t <dockerhub-username>/cw2-server:1.0 .
+                    docker build -t ridiing/cw2-server:1.0 .
                     '''
                 }
             }
@@ -33,7 +33,7 @@ pipeline {
                 script {
                     sh '''
                     echo $DOCKER_CREDENTIALS_PSW | docker login -u $DOCKER_CREDENTIALS_USR --password-stdin
-                    docker push <dockerhub-username>/cw2-server:1.0
+                    docker push ridiing/cw2-server:1.0
                     '''
                 }
             }
