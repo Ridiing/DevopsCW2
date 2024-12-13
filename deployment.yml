@@ -1,0 +1,21 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: cw2-server
+  labels:
+    app: cw2-server
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: cw2-server
+  template:
+    metadata:
+      labels:
+        app: cw2-server
+    spec:
+      containers:
+      - name: cw2-server
+        image: ridiing/cw2-server:1.0
+        ports:
+        - containerPort: 8080
