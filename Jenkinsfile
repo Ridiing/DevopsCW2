@@ -3,7 +3,7 @@ pipeline {
 
     environment {
         DOCKER_CREDENTIALS = credentials('docker-hub-credentials') // DockerHub credentials ID
-        KUBECONFIG = '/var/jenkins_home/.kube/config' // Path to Kubernetes config in the Jenkins container
+        OPENSHIFT_TOKEN = credentials('openshift-token') // Openshift token credentials ID
     }
 
     stages {
@@ -30,9 +30,9 @@ pipeline {
         // Stage 3: Push Docker image to DockerHub
         stage('Push Docker Image') {
             steps {
-                script {
+                withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PSW', usernameVariable: 'DOCKER_USER')]) {
                     sh '''
-                    echo $DOCKER_CREDENTIALS_PSW | docker login -u $DOCKER_CREDENTIALS_USR --password-stdin
+                    echo $DOCKER_PSW | docker login -u $DOCKER_USER --password-stdin
                     docker push ridiing/cw2-server:1.0
                     '''
                 }
@@ -42,27 +42,14 @@ pipeline {
         // Stage 4: Deploy to Kubernetes
         stage('Deploy to Kubernetes') {
             steps {
-                script {
+                withCredentials([string(credentialsId: 'openshift-token', variable: 'TOKEN')]) {
                     sh '''
                     export KUBECONFIG=/var/jenkins_home/.kube/config
-                    kubectl set image deployment/cw2-app cw2-app=ridiing/cw2-server:1.0
-                    kubectl rollout status deployment/cw2-app
+                    kubectl --token=$TOKEN set image deployment/cw2-app cw2-app=ridiing/cw2-server:1.0
+                    kubectl --token=$TOKEN rollout status deployment/cw2-app
                     '''
                 }
             }
         }
     }
-
-    post {
-        always {
-            echo 'Pipeline completed.'
-        }
-        success {
-            echo 'Pipeline completed successfully.'
-        }
-        failure {
-            echo 'Pipeline failed. Check logs for details.'
-        }
-    }
 }
-
