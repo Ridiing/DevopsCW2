@@ -3,7 +3,6 @@ pipeline {
 
     environment {
         DOCKER_CREDENTIALS = credentials('docker-hub-credentials') // DockerHub credentials ID
-        OPENSHIFT_TOKEN = credentials('openshift-token') // Openshift token credentials ID
     }
 
     stages {
@@ -30,26 +29,37 @@ pipeline {
         // Stage 3: Push Docker image to DockerHub
         stage('Push Docker Image') {
             steps {
-                withCredentials([usernamePassword(credentialsId: 'docker-hub-credentials', passwordVariable: 'DOCKER_PSW', usernameVariable: 'DOCKER_USER')]) {
-                    sh '''
-                    echo $DOCKER_PSW | docker login -u $DOCKER_USER --password-stdin
-                    docker push ridiing/cw2-server:1.0
-                    '''
+                script {
+                    withDockerRegistry([credentialsId: 'docker-hub-credentials', url: '']) {
+                        sh '''
+                        docker push ridiing/cw2-server:1.0
+                        '''
+                    }
                 }
             }
         }
 
-        // Stage 4: Deploy to Kubernetes
-        stage('Deploy to Kubernetes') {
+        // Stage 4: Deploy Docker container (optional)
+        stage('Deploy Container') {
             steps {
-                withCredentials([string(credentialsId: 'openshift-token', variable: 'TOKEN')]) {
+                script {
                     sh '''
-                    export KUBECONFIG=/var/jenkins_home/.kube/config
-                    kubectl --token=$TOKEN set image deployment/cw2-app cw2-app=ridiing/cw2-server:1.0
-                    kubectl --token=$TOKEN rollout status deployment/cw2-app
+                    docker stop cw2-server || true
+                    docker rm cw2-server || true
+                    docker run -d --name cw2-server -p 8080:8080 ridiing/cw2-server:1.0
                     '''
                 }
             }
         }
     }
+
+    post {
+        success {
+            echo 'Pipeline completed successfully!'
+        }
+        failure {
+            echo 'Pipeline failed. Check logs for details.'
+        }
+    }
 }
+
