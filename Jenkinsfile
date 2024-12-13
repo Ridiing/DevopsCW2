@@ -1,36 +1,84 @@
 pipeline {
     agent any
+
     environment {
-        DOCKER_CREDENTIALS = credentials('docker-hub-credentials')
-        KUBECONFIG = credentials('kubeconfig')
+        DOCKER_CREDENTIALS = credentials('docker-hub-creds') // Replace with your DockerHub credentials ID
+        KUBECONFIG = credentials('kubeconfig') // Replace with your Kubernetes config credentials ID
     }
+
     stages {
-        stage('Checkout') {
+        stage('Checkout SCM') {
             steps {
-                git url: 'git@github.com:Ridiing/DevopsCW2.git', credentialsId: 'github-ssh-key'
+                script {
+                    checkout scm
+                }
             }
         }
+
         stage('Build Docker Image') {
             steps {
-                sh 'docker build -t your-dockerhub-account/your-image:latest .'
+                script {
+                    sh """
+                    docker build -t ${env.DOCKER_CREDENTIALS_USR}/cw2-server:1.0 .
+                    """
+                }
             }
         }
-        stage('Push to DockerHub') {
+
+        stage('Test Docker Container') {
             steps {
-                sh '''
-                echo $DOCKER_CREDENTIALS | docker login -u your-dockerhub-username --password-stdin
-                docker push your-dockerhub-account/your-image:latest
-                '''
+                script {
+                    sh """
+                    docker run --name cw2-test-container -d ${env.DOCKER_CREDENTIALS_USR}/cw2-server:1.0
+                    sleep 10
+                    docker ps | grep cw2-test-container || (echo 'Container failed to start' && exit 1)
+                    docker stop cw2-test-container && docker rm cw2-test-container
+                    """
+                }
             }
         }
+
+        stage('Push Docker Image to DockerHub') {
+            steps {
+                script {
+                    sh """
+                    echo $DOCKER_CREDENTIALS_PSW | docker login -u $DOCKER_CREDENTIALS_USR --password-stdin
+                    docker push ${env.DOCKER_CREDENTIALS_USR}/cw2-server:1.0
+                    """
+                }
+            }
+        }
+
         stage('Deploy to Kubernetes') {
             steps {
-                sh '''
-                echo "${KUBECONFIG}" > ~/.kube/config
-                kubectl apply -f deployment.yml
-                kubectl rollout status deployment your-deployment-name
-                '''
+                script {
+                    sh """
+                    export KUBECONFIG=$KUBECONFIG
+                    kubectl apply -f k8s/deployment.yaml
+                    kubectl apply -f k8s/service.yaml
+                    """
+                }
             }
+        }
+
+        stage('Scale Deployment') {
+            steps {
+                script {
+                    sh """
+                    export KUBECONFIG=$KUBECONFIG
+                    kubectl scale deployment cw2-app --replicas=3
+                    """
+                }
+            }
+        }
+    }
+
+    post {
+        success {
+            echo 'Pipeline completed successfully.'
+        }
+        failure {
+            echo 'Pipeline failed. Check logs for details.'
         }
     }
 }
