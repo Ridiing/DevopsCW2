@@ -2,11 +2,12 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_CREDENTIALS = credentials('docker-hub-credentials') // Replace with your DockerHub credentials ID
-        KUBECONFIG = credentials('kubeconfig') // Replace with your Kubernetes config credentials ID
+        DOCKER_CREDENTIALS = credentials('docker-hub-credentials') // DockerHub credentials ID
+        KUBECONFIG = '/var/jenkins_home/.kube/config' // Path to Kubernetes config in the Jenkins container
     }
 
     stages {
+        // Stage 1: Checkout code from SCM
         stage('Checkout SCM') {
             steps {
                 script {
@@ -15,65 +16,47 @@ pipeline {
             }
         }
 
+        // Stage 2: Build Docker image
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh """
-                    docker build -t ${env.DOCKER_CREDENTIALS_USR}/cw2-server:1.0 .
-                    """
+                    sh '''
+                    docker build -t <dockerhub-username>/cw2-server:1.0 .
+                    '''
                 }
             }
         }
 
-        stage('Test Docker Container') {
+        // Stage 3: Push Docker image to DockerHub
+        stage('Push Docker Image') {
             steps {
                 script {
-                    sh """
-                    docker run --name cw2-test-container -d ${env.DOCKER_CREDENTIALS_USR}/cw2-server:1.0
-                    sleep 10
-                    docker ps | grep cw2-test-container || (echo 'Container failed to start' && exit 1)
-                    docker stop cw2-test-container && docker rm cw2-test-container
-                    """
-                }
-            }
-        }
-
-        stage('Push Docker Image to DockerHub') {
-            steps {
-                script {
-                    sh """
+                    sh '''
                     echo $DOCKER_CREDENTIALS_PSW | docker login -u $DOCKER_CREDENTIALS_USR --password-stdin
-                    docker push ${env.DOCKER_CREDENTIALS_USR}/cw2-server:1.0
-                    """
+                    docker push <dockerhub-username>/cw2-server:1.0
+                    '''
                 }
             }
         }
 
+        // Stage 4: Deploy to Kubernetes
         stage('Deploy to Kubernetes') {
             steps {
                 script {
-                    sh """
-                    export KUBECONFIG=$KUBECONFIG
-                    kubectl apply -f k8s/deployment.yaml
-                    kubectl apply -f k8s/service.yaml
-                    """
-                }
-            }
-        }
-
-        stage('Scale Deployment') {
-            steps {
-                script {
-                    sh """
-                    export KUBECONFIG=$KUBECONFIG
-                    kubectl scale deployment cw2-app --replicas=3
-                    """
+                    sh '''
+                    export KUBECONFIG=/var/jenkins_home/.kube/config
+                    kubectl set image deployment/cw2-app cw2-app=<dockerhub-username>/cw2-server:1.0
+                    kubectl rollout status deployment/cw2-app
+                    '''
                 }
             }
         }
     }
 
     post {
+        always {
+            echo 'Pipeline completed.'
+        }
         success {
             echo 'Pipeline completed successfully.'
         }
