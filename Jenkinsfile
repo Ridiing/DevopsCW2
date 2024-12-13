@@ -7,7 +7,7 @@ pipeline {
     stages {
         stage('Checkout') {
             steps {
-                git branch: 'main', url: 'https://github.com/Riding/DevopsCW2.git'
+                git url: 'git@github.com:Ridiing/DevopsCW2.git', credentialsId: 'github-ssh-key'
             }
         }
         stage('Build Docker Image') {
