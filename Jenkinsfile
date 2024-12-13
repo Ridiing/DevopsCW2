@@ -2,7 +2,7 @@ pipeline {
     agent any
 
     environment {
-        DOCKER_CREDENTIALS = credentials('docker-hub-creds') // Replace with your DockerHub credentials ID
+        DOCKER_CREDENTIALS = credentials('docker-hub-credentials') // Replace with your DockerHub credentials ID
         KUBECONFIG = credentials('kubeconfig') // Replace with your Kubernetes config credentials ID
     }
 
