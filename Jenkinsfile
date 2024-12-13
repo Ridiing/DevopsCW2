@@ -45,7 +45,7 @@ pipeline {
                 script {
                     sh '''
                     export KUBECONFIG=/var/jenkins_home/.kube/config
-                    kubectl set image deployment/cw2-app cw2-app=<dockerhub-username>/cw2-server:1.0
+                    kubectl set image deployment/cw2-app cw2-app=ridiing/cw2-server:1.0
                     kubectl rollout status deployment/cw2-app
                     '''
                 }
