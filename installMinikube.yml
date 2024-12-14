@@ -11,13 +11,13 @@
       shell: minikube delete || true
 
     - name: Check if fs.protected_regular is already 0
-      become: yes
-      command: sysctl-w fs.protected_regular=0
-      ignore_errors: true
+      command: sysctl fs.protected_regular
+      register: sysctl_check
+      ignore_errors: yes
 
     - name: Set sysctl for Minikube lock (if needed)
       become: yes
-      command: sysctl fs.protected_regular=0
+      command: sysctl -w fs.protected_regular=0
       when: "'fs.protected_regular = 0' not in sysctl_check.stdout"
       ignore_errors: true
 
@@ -40,7 +40,7 @@
     - name: Start Minikube
       become: yes
       become_user: jenkins
-      command: minikube start --driver=docker --force --cpus=2 --memory=2200mb
+      command: minikube start --driver=docker --force --cpus=4 --memory=4096mb
       environment:
         HOME: "/var/jenkins_home"
 
