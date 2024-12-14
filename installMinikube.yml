@@ -1,21 +1,21 @@
 ---
 - name: Install and Start Minikube
   hosts: localhost
-  become: yes
+  become: true
+
   tasks:
     - name: Download Minikube binary
       get_url:
         url: "https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64"
-        dest: "/usr/local/bin/minikube"
-        mode: "0755"
+        dest: /usr/local/bin/minikube
+        mode: '0755'
 
     - name: Delete existing Minikube cluster (if any)
-      command: minikube delete --all --purge
-      ignore_errors: yes
+      shell: minikube delete || true
 
     - name: Set sysctl for Minikube lock
       command: sysctl fs.protected_regular=0
 
     - name: Start Minikube
-      become: no
-      shell: minikube start --driver=docker --cpus=2 --memory=2048 –force
+      shell: minikube start --driver=docker
+
