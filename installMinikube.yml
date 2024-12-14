@@ -1,45 +1,46 @@
+---
 - name: Install and Start Minikube
   hosts: localhost
+  become: yes
   tasks:
     - name: Download Minikube binary
       get_url:
-        url: https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64
-        dest: /usr/local/bin/minikube
-        mode: '0755'
+        url: "https://storage.googleapis.com/minikube/releases/latest/minikube-linux-amd64"
+        dest: "/usr/local/bin/minikube"
+        mode: "0755"
 
     - name: Delete existing Minikube cluster (if any)
-      shell: minikube delete || true
-
-    - name: Check if fs.protected_regular is already 0
-      command: sysctl fs.protected_regular
-      register: sysctl_check
+      shell: minikube delete --all --purge
       ignore_errors: yes
 
-    - name: Set sysctl for Minikube lock (if needed)
-      become: yes
-      command: sysctl -w fs.protected_regular=0
-      when: "'fs.protected_regular = 0' not in sysctl_check.stdout"
-      ignore_errors: true
+    - name: Ensure Docker service is running
+      service:
+        name: docker
+        state: started
 
-    - name: Ensure /tmp is writable
-      file:
-        path: /tmp
-        state: directory
-        mode: '1777'
+    - name: Set sysctl for Minikube lock
+      sysctl:
+        name: fs.protected_regular
+        value: 0
+        state: present
 
-    - name: Add Jenkins to Docker group
+    - name: Ensure Jenkins user is added to the Docker group
       command: usermod -aG docker jenkins
-      become: yes
+      ignore_errors: yes
 
-    - name: Restart Docker service
+    - name: Restart Docker to apply group changes
       service:
         name: docker
         state: restarted
-      become: yes
 
-    - name: Start Minikube
+    - name: Start Minikube with Docker driver
       become: no
-      command: minikube start --driver=docker --force --cpus=2 --memory=2048mb
+      shell: |
+        minikube start \
+          --driver=docker \
+          --cpus=2 \
+          --memory=2048mb \
+          --force
       environment:
         HOME: "/var/jenkins_home"
 
