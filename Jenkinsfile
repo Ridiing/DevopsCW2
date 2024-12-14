@@ -15,7 +15,7 @@ pipeline {
             }
         }
 
-        // Stage 2: Build Docker image
+        // Stage 2: Build Docker Image
         stage('Build Docker Image') {
             steps {
                 script {
@@ -26,7 +26,7 @@ pipeline {
             }
         }
 
-        // Stage 3: Push Docker image to DockerHub
+        // Stage 3: Push Docker Image to DockerHub
         stage('Push Docker Image') {
             steps {
                 script {
@@ -39,14 +39,34 @@ pipeline {
             }
         }
 
-        // Stage 4: Deploy Docker container (optional)
-        stage('Deploy Container') {
+        // Stage 4: Install Kubectl
+        stage('Install Kubectl') {
             steps {
                 script {
                     sh '''
-                    docker stop cw2-server || true
-                    docker rm cw2-server || true
-                    docker run -d --name cw2-server -p 8081:8080 ridiing/cw2-server:1.0
+                    ansible-playbook installKubectl.yml
+                    '''
+                }
+            }
+        }
+
+        // Stage 5: Install Minikube
+        stage('Install Minikube') {
+            steps {
+                script {
+                    sh '''
+                    ansible-playbook installMinikube.yml
+                    '''
+                }
+            }
+        }
+
+        // Stage 6: Deploy Application to Kubernetes
+        stage('Deploy Application') {
+            steps {
+                script {
+                    sh '''
+                    ansible-playbook deployApplication.yml
                     '''
                 }
             }
@@ -54,8 +74,11 @@ pipeline {
     }
 
     post {
+        always {
+            echo 'Pipeline completed.'
+        }
         success {
-            echo 'Pipeline completed successfully!'
+            echo 'Pipeline completed successfully.'
         }
         failure {
             echo 'Pipeline failed. Check logs for details.'
