@@ -3,9 +3,17 @@
   hosts: localhost
   become: true
   tasks:
+    - name: Fetch the latest stable version of kubectl
+      shell: curl -L -s https://dl.k8s.io/release/stable.txt
+      register: stable_version
+
+    - name: Debug the fetched version
+      debug:
+        msg: "Stable kubectl version is {{ stable_version.stdout }}"
+
     - name: Download kubectl binary
       get_url:
-        url: "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
+        url: "https://dl.k8s.io/release/{{ stable_version.stdout }}/bin/linux/amd64/kubectl"
         dest: /usr/local/bin/kubectl
         mode: '0755'
 
