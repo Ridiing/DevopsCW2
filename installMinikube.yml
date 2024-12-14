@@ -13,8 +13,15 @@
     - name: Delete existing Minikube cluster (if any)
       shell: minikube delete || true
 
-    - name: Set sysctl for Minikube lock
+    - name: Check if fs.protected_regular is already 0
+      command: sysctl fs.protected_regular
+      register: sysctl_check
+      ignore_errors: true
+
+    - name: Set sysctl for Minikube lock (if needed)
       command: sysctl fs.protected_regular=0
+      when: "'fs.protected_regular = 0' not in sysctl_check.stdout"
+      ignore_errors: true
 
     - name: Start Minikube
       shell: minikube start --driver=docker
