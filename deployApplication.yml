@@ -1,0 +1,32 @@
+---
+- name: Deploy application to Kubernetes
+  hosts: localhost
+  become: yes
+  vars:
+    kubeconfig_path: /home/ubuntu/.kube/config
+  environment:
+    KUBECONFIG: "{{ kubeconfig_path }}"
+  tasks:
+    - name: Verify Kubernetes connection
+      shell: kubectl cluster-info
+      register: cluster_info
+      failed_when: "'running' not in cluster_info.stdout"
+
+    - name: Create Kubernetes deployment
+      shell: |
+        kubectl create deployment cw2-app --image=ridiing/cw2-server:1.0 --dry-run=client -o yaml > /tmp/cw2-app-deployment.yml
+        kubectl apply -f /tmp/cw2-app-deployment.yml
+      args:
+        creates: /tmp/cw2-app-deployment.yml
+
+    - name: Scale deployment to 3 replicas
+      shell: |
+        kubectl scale deployment cw2-app --replicas=3
+
+    - name: Configure rolling update strategy
+      shell: |
+        kubectl patch deployment cw2-app -p '{"spec": {"strategy": {"type": "RollingUpdate", "rollingUpdate": {"maxSurge": 1, "maxUnavailable": 1}}}}'
+
+    - name: Check deployment status
+      shell: kubectl rollout status deployment/cw2-app
+
