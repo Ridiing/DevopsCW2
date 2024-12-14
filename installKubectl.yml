@@ -1,0 +1,13 @@
+- name: Install Kubectl via Snap
+  hosts: localhost
+  become: true
+  tasks:
+    - name: Install snapd
+      apt:
+        name: snapd
+        state: present
+    - name: Install kubectl
+      snap:
+        name: kubectl
+        classic: yes
+
