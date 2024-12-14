@@ -41,6 +41,7 @@
       become: yes
       become_user: jenkins
       command: minikube start --driver=docker --force --cpus=2 --memory=2048mb
+               --docker-opt="--network=minikube"
       environment:
         HOME: "/var/jenkins_home"
 
