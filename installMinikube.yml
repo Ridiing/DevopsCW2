@@ -40,8 +40,8 @@
     - name: Start Minikube
       become: yes
       become_user: jenkins
-      command: minikube start --driver=docker --force --cpus=2 --memory=2048mb
-               --docker-opt="--network=minikube"
+      command: minikube start --driver=docker --force --cpus=2 --memory=2048mb --timeout=60s
+               --docker-opt="--network=minikube-net"
       environment:
         HOME: "/var/jenkins_home"
 
