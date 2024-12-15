@@ -28,7 +28,7 @@ pipeline {
             docker image inspect ridiing/cw2-server:1.0
 
 		#stop and remove 
-		docker strop test-container || true
+		docker stop test-container || true
 		docker rm test-container || true
 
             # Run the test container
@@ -43,7 +43,7 @@ pipeline {
             # List running containers
             echo "Container test passed"
 
-            # Container is stopped automatically since it was run with --rm
+            
             '''
         }
             }
