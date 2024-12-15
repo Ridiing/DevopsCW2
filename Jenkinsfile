@@ -30,13 +30,13 @@ pipeline {
         stage('Test Container') {
             steps {
                 script {
-                    sh '''
-                    docker run --rm --name test-container -d -p 8082:8080 ridiing/cw2-server:1.0
-                    sleep 5  # Give the container time to start
-                    curl -f http://localhost:8082 || (echo "Container test failed!" && exit 1)
-                    docker stop test-container
-                    '''
-                }
+		sh '''
+            docker stop test-container || true
+            docker rm test-container || true
+            docker run --rm --name test-container -d -p 8082:8080 ridiing/cw2-server:1.0
+            sleep 5  # Wait for the container to initialize
+            curl -f http://localhost:8082 || (echo "Container test failed!" && exit 1)
+            '''                }
             }
         }
 
