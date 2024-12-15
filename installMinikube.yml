@@ -27,12 +27,14 @@
       become: true
 
     - name: Check if Docker service is active
-      shell: |
-        systemctl is-active docker || systemctl start docker
+      shell: docker info
       register: docker_status
-      changed_when: docker_status.rc == 0
-      failed_when: docker_status.rc != 0
+      ignore_errors: yes
 
+    - name: Fail if Docker is not running
+      fail:
+         msg: "docker isnt running, ensure its running on host system"
+      when: docker_status.rc !=0
     - name: Start Minikube
       become: false
       shell: |
