@@ -27,6 +27,10 @@ pipeline {
             # Inspect the Docker image
             docker image inspect ridiing/cw2-server:1.0
 
+		#stop and remove 
+		docker strop test-container || true
+		docker rm test-container || true
+
             # Run the test container
             docker run --rm --name test-container -d -p 8082:8080 ridiing/cw2-server:1.0
 
@@ -37,7 +41,7 @@ pipeline {
             curl -f http://localhost:8082 || (echo "Test failed: Container not responding!" && docker logs test-container && exit 1)
 
             # List running containers
-            docker ps
+            echo "Container test passed"
 
             # Container is stopped automatically since it was run with --rm
             '''
