@@ -26,7 +26,8 @@
         state: present
 
     - name: Check if Jenkins container is already connected to the network
-      shell: docker network inspect jenkins-minikube-net | grep '"Name": "jenkins"'
+      shell: |
+        docker network inspect jenkins-minikube-net | grep '\"Name\": \"jenkins\"'
       register: jenkins_connected
       failed_when: false
 
@@ -57,7 +58,7 @@
 
     - name: Connect Minikube container to the Jenkins-Minikube network
       shell: |
-        docker network inspect jenkins-minikube-net | grep '"Name": "minikube"'
+        docker network inspect jenkins-minikube-net | grep '\"Name\": \"minikube\"'
         if [ $? -ne 0 ]; then
           docker network connect jenkins-minikube-net minikube
         fi
@@ -72,4 +73,3 @@
       debug:
         msg: "{{ minikube_status.stderr }}"
       when: minikube_status.failed
-
