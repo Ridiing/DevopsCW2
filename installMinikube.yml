@@ -26,11 +26,12 @@
         sysctl fs.protected_regular=0
       become: true
 
-    - name: Ensure Docker is running
-      systemd:
-        name: docker
-        state: started
-        enabled: true
+    - name: Check if Docker service is active
+      shell: |
+        systemctl is-active docker || systemctl start docker
+      register: docker_status
+      changed_when: docker_status.rc == 0
+      failed_when: docker_status.rc != 0
 
     - name: Start Minikube
       become: false
