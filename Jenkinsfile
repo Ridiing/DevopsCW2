@@ -3,6 +3,7 @@ pipeline {
 
     environment {
         DOCKER_CREDENTIALS = credentials('docker-hub-credentials') // DockerHub credentials ID
+        KUBECONFIG_PATH = '/home/ubuntu/.kube/config'             // Path to kubeconfig
     }
 
     stages {
@@ -30,13 +31,23 @@ pipeline {
         stage('Test Container') {
             steps {
                 script {
-		sh '''
-            docker stop test-container || true
-            docker rm test-container || true
-            docker run --rm --name test-container -d -p 8082:8080 ridiing/cw2-server:1.0
-            sleep 5  # Wait for the container to initialize
-            curl -f http://localhost:8082 || (echo "Container test failed!" && exit 1)
-            '''                }
+                    try {
+                        // Stop and remove any existing container
+                        sh '''
+                        docker stop test-container || true
+                        docker rm test-container || true
+                        '''
+                        // Run the container and test it
+                        sh '''
+                        docker run --rm --name test-container -d -p 8082:8080 ridiing/cw2-server:1.0
+                        sleep 5
+                        curl -f http://localhost:8082
+                        '''
+                    } catch (Exception e) {
+                        sh 'echo "Container test failed!"'
+                        error("Test stage failed.")
+                    }
+                }
             }
         }
 
@@ -53,14 +64,35 @@ pipeline {
             }
         }
 
-        // Stage 5: Deploy Docker Container
-        stage('Deploy Container') {
+        // Stage 5: Deploy to Kubernetes
+        stage('Deploy to Kubernetes') {
+            environment {
+                KUBECONFIG = "${KUBECONFIG_PATH}"
+            }
+            steps {
+                script {
+                    try {
+                        // Update Kubernetes deployment
+                        sh '''
+                        kubectl set image deployment/cw2-app cw2-server=ridiing/cw2-server:1.0
+                        kubectl rollout restart deployment/cw2-app
+                        kubectl rollout status deployment/cw2-app
+                        '''
+                    } catch (Exception e) {
+                        sh 'echo "Deployment failed!"'
+                        error("Deployment stage failed.")
+                    }
+                }
+            }
+        }
+
+        // Stage 6: Verify Deployment
+        stage('Verify Deployment') {
             steps {
                 script {
                     sh '''
-                    docker stop cw2-server || true
-                    docker rm cw2-server || true
-                    docker run -d --name cw2-server -p 8081:8080 ridiing/cw2-server:1.0
+                    sleep 10
+                    curl -f http://$(minikube ip):32141
                     '''
                 }
             }
