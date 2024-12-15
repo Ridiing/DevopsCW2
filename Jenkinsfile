@@ -39,7 +39,7 @@ pipeline {
             sleep 10
 
             # Test the running container
-            if curl -f http://localhost:8083; then
+            if curl -f 172.31.18.190:8083; then
                 echo "Test passed: Container is responding!"
             else
                 echo "Test failed: Container not responding!"
