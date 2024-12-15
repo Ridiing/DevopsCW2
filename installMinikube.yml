@@ -5,7 +5,9 @@
   tasks:
     - name: Ensure required packages are installed
       apt:
-        name: ["curl", "docker.io"]
+        name:
+          - curl
+          - docker.io
         state: present
         update_cache: yes
 
@@ -15,35 +17,39 @@
         dest: "/usr/local/bin/minikube"
         mode: "0755"
 
-    - name: Ensure Minikube home directory exists
-      file:
-        path: "/var/jenkins_home"
-        state: directory
-        owner: jenkins
-        group: jenkins
-        mode: "0755"
-
     - name: Delete existing Minikube cluster (if any)
       command: minikube delete --all --purge
       ignore_errors: yes
       environment:
         HOME: "/var/jenkins_home"
 
-    - name: Set sysctl for Minikube lock
-      command: sysctl -w fs.protected_regular=0
+    - name: Set sysctl to disable fs.protected_regular
+      shell: |
+        sysctl -w fs.protected_regular=0
+        echo "fs.protected_regular=0" >> /etc/sysctl.conf
+      args:
+        warn: false
 
     - name: Create Docker network for Minikube
       shell: docker network create --driver bridge jenkins-minikube-net || true
 
+    - name: Ensure Minikube home directory exists
+      file:
+        path: "/var/jenkins_home/.minikube"
+        state: directory
+        owner: jenkins
+        group: jenkins
+        mode: "0755"
+
     - name: Start Minikube
-      shell: >
-        minikube start
-        --driver=docker
-        --cpus=2
-        --memory=2048mb
-        --docker-opt="--network=jenkins-minikube-net"
-        --force
-        -v=8
+      shell: |
+        minikube start \
+          --driver=docker \
+          --cpus=2 \
+          --memory=2048mb \
+          --docker-opt="--network=jenkins-minikube-net" \
+          --force \
+          -v=8
       environment:
         HOME: "/var/jenkins_home"
       register: minikube_start
@@ -54,12 +60,12 @@
       when: minikube_start.rc != 0
 
     - name: Verify Minikube status
-      command: minikube status
+      shell: minikube status
       environment:
         HOME: "/var/jenkins_home"
 
-    - name: Ensure Minikube control plane is reachable
-      command: kubectl cluster-info
+    - name: Test Minikube control plane
+      shell: kubectl cluster-info
       environment:
         HOME: "/var/jenkins_home"
       ignore_errors: yes
