@@ -35,6 +35,6 @@
 
     - name: Start Minikube
       shell: |
-        minikube start --driver=docker --cpus=2 --memory=2048mb --force -v=8 --timeout=15m0s
+        minikube start --driver=docker --cpus=2 --memory=2048mb --force -v=8
       environment:
         HOME: "/var/jenkins_home"
