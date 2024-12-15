@@ -3,10 +3,11 @@ pipeline {
 
     environment {
         DOCKER_CREDENTIALS = credentials('docker-hub-credentials') // DockerHub credentials ID
+        IMAGE_NAME = 'ridiing/cw2-server'
+        IMAGE_TAG = '1.0.0'
     }
 
     stages {
-        // Stage 1: Checkout code from SCM
         stage('Checkout SCM') {
             steps {
                 script {
@@ -15,39 +16,32 @@ pipeline {
             }
         }
 
-        // Stage 2: Build Docker image
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh '''
-                    docker build -t ridiing/cw2-server:1.0 .
-                    '''
+                    sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
                 }
             }
         }
 
-        // Stage 3: Push Docker image to DockerHub
         stage('Push Docker Image') {
             steps {
                 script {
                     withDockerRegistry([credentialsId: 'docker-hub-credentials', url: '']) {
-                        sh '''
-                        docker push ridiing/cw2-server:1.0
-                        '''
+                        sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
                     }
                 }
             }
         }
 
-        // Stage 4: Deploy Docker container (optional)
-        stage('Deploy Container') {
+        stage('Update Kubernetes Deployment') {
             steps {
                 script {
-                    sh '''
-                    docker stop cw2-server || true
-                    docker rm cw2-server || true
-                    docker run -d --name cw2-server -p 8081:8080 ridiing/cw2-server:1.0
-                    '''
+                    // Update Kubernetes Deployment with the new image
+                    sh """
+                    kubectl set image deployment/cw2-app cw2-server=${IMAGE_NAME}:${IMAGE_TAG}
+                    kubectl rollout restart deployment/cw2-app
+                    """
                 }
             }
         }
