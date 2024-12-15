@@ -19,7 +19,7 @@
     - name: Create Jenkins-Minikube network
       shell: docker network create --driver bridge jenkins-minikube-net || true
 
-    - name: Connect Jenkins container to network
+    - name: Connect Jenkins container to the network
       shell: docker network connect jenkins-minikube-net jenkins || true
 
     - name: Start Minikube
