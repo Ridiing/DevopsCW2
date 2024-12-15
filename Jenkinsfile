@@ -55,12 +55,10 @@ pipeline {
 
         stage('Deploy to Kubernetes') {
             steps {
-                echo 'Deploying to Kubernetes...'
-                sh '''
-                kubectl apply -f deployment.yaml
-                kubectl rollout status deployment/cw2-app
-                kubectl apply -f service.yaml
-                '''
+		scrip { 
+                	echo 'Deploying to Kubernetes...'
+            		sh 'kubectl apply -f /var/jenkins_home/deployment.yaml'
+}
             }
         }
 
