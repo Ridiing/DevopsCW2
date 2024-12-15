@@ -21,13 +21,27 @@ pipeline {
 
         stage('Test Container') {
             steps {
-                sh '''
-                docker stop test-container || true
-                docker rm test-container || true
-                docker run --rm --name test-container -d -p 8082:8080 ridiing/cw2-server:1.0
-                sleep 5
-                curl -f http://localhost:8082 || (echo "Container test failed!" && exit 1)
-                '''
+                script {
+		  echo 'Testing Docker Image...'
+            sh '''
+            # Inspect the Docker image
+            docker image inspect ridiing/cw2-server:1.0
+
+            # Run the test container
+            docker run --rm --name test-container -d -p 8082:8080 ridiing/cw2-server:1.0
+
+            # Wait a few seconds to allow the container to start
+            sleep 5
+
+            # Test the running container
+            curl -f http://localhost:8082 || (echo "Test failed: Container not responding!" && docker logs test-container && exit 1)
+
+            # List running containers
+            docker ps
+
+            # Container is stopped automatically since it was run with --rm
+            '''
+        }
             }
         }
 
