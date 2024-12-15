@@ -1,4 +1,3 @@
----
 - name: Install and Start Minikube
   hosts: localhost
   become: yes
@@ -9,38 +8,29 @@
         dest: "/usr/local/bin/minikube"
         mode: "0755"
 
-    - name: Delete existing Minikube cluster (if any)
-      shell: minikube delete --all --purge
+    - name: Delete existing Minikube cluster
+      command: minikube delete --all --purge
       ignore_errors: yes
 
-    - name: Ensure Docker service is running
-      service:
-        name: docker
-        state: started
+    - name: Create Jenkins-Minikube network
+      shell: docker network create --driver bridge jenkins-minikube-net || true
 
-    - name: Set sysctl for Minikube lock
-      sysctl:
-        name: fs.protected_regular
-        value: 0
-        state: present
+    - name: Connect Jenkins and Minikube containers to the network
+      shell: >
+        docker network connect jenkins-minikube-net jenkins;
+        docker network connect jenkins-minikube-net minikube;
 
-    - name: Ensure Jenkins user is added to the Docker group
-      command: usermod -aG docker jenkins
-      ignore_errors: yes
-
-    - name: Restart Docker to apply group changes
-      service:
-        name: docker
-        state: restarted
-
-    - name: Start Minikube with Docker driver
-      become: no
-      shell: |
-        minikube start \
-          --driver=docker \
-          --cpus=2 \
-          --memory=2048mb \
-          --force
+    - name: Start Minikube
+      shell: >
+        minikube start
+        --driver=docker
+        --force
+        --cpus=2
+        --memory=2048mb
+        --docker-opt="--network=jenkins-minikube-net"
+        --apiserver-ips="172.18.0.3"
+        --apiserver-name="minikube.local"
+        -v=8
       environment:
         HOME: "/var/jenkins_home"
 
