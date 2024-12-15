@@ -31,7 +31,7 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    docker run --rm --name test-container -d -p 8081:8080 ridiing/cw2-server:1.0
+                    docker run --rm --name test-container -d -p 8082:8080 ridiing/cw2-server:1.0
                     sleep 5  # Give the container time to start
                     curl -f http://localhost:8081 || (echo "Container test failed!" && exit 1)
                     docker stop test-container
