@@ -12,13 +12,27 @@
       command: minikube delete --all --purge
       ignore_errors: yes
 
-    - name: Create Jenkins-Minikube network
-      shell: docker network create --driver bridge jenkins-minikube-net || true
+    - name: Ensure Docker service is running
+      shell: |
+        if ! systemctl is-active --quiet docker; then
+          systemctl start docker
+        fi
+      ignore_errors: yes
 
-    - name: Connect Jenkins and Minikube containers to the network
-      shell: >
-        docker network connect jenkins-minikube-net jenkins;
-        docker network connect jenkins-minikube-net minikube;
+    - name: Create Jenkins-Minikube network
+      docker_network:
+        name: jenkins-minikube-net
+        driver: bridge
+        state: present
+
+    - name: Check if Jenkins container is already connected to the network
+      shell: docker network inspect jenkins-minikube-net | grep '"Name": "jenkins"'
+      register: jenkins_connected
+      failed_when: false
+
+    - name: Connect Jenkins container to the network if not already connected
+      shell: docker network connect jenkins-minikube-net jenkins
+      when: jenkins_connected.stdout == ""
 
     - name: Start Minikube
       shell: >
@@ -33,4 +47,29 @@
         -v=8
       environment:
         HOME: "/var/jenkins_home"
+      register: minikube_start
+      ignore_errors: yes
+
+    - name: Debug Minikube start logs if start fails
+      debug:
+        msg: "{{ minikube_start.stderr }}"
+      when: minikube_start.failed
+
+    - name: Connect Minikube container to the Jenkins-Minikube network
+      shell: |
+        docker network inspect jenkins-minikube-net | grep '"Name": "minikube"'
+        if [ $? -ne 0 ]; then
+          docker network connect jenkins-minikube-net minikube
+        fi
+      ignore_errors: yes
+
+    - name: Ensure Minikube control plane is reachable
+      shell: minikube status
+      register: minikube_status
+      changed_when: false
+
+    - name: Debug Minikube status if it fails
+      debug:
+        msg: "{{ minikube_status.stderr }}"
+      when: minikube_status.failed
 
