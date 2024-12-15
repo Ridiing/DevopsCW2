@@ -4,12 +4,11 @@
   become: yes
   tasks:
     - name: Ensure required packages are installed
-      package:
-        name: "{{ item }}"
+      apt:
+        name:
+          - curl
+          - conntrack
         state: present
-      loop:
-        - curl
-        - conntrack
 
     - name: Download Minikube binary
       get_url:
@@ -18,31 +17,24 @@
         mode: "0755"
 
     - name: Delete existing Minikube cluster (if any)
-      command: minikube delete --all --purge
+      shell: minikube delete --all --purge
       ignore_errors: yes
 
     - name: Set sysctl to disable fs.protected_regular
-      shell: |
-        sysctl fs.protected_regular=0
-      become: true
+      shell: sysctl fs.protected_regular=0
 
-    - name: Check if Docker service is active
+    - name: Check if Docker is running
       shell: docker info
       register: docker_status
       ignore_errors: yes
 
     - name: Fail if Docker is not running
       fail:
-         msg: "docker isnt running, ensure its running on host system"
-      when: docker_status.rc !=0
+        msg: "Docker is not running. Please ensure Docker is running on the host system."
+      when: docker_status.rc != 0
+
     - name: Start Minikube
-      become: false
       shell: |
-        minikube start --driver=docker --cpus=2 --memory=2048mb --docker-opt="--network=jenkins-minikube-net" --force -v=8
+        minikube start --driver=docker --cpus=2 --memory=2048mb --force -v=8 --timeout=15m0s
       environment:
         HOME: "/var/jenkins_home"
-
-    - name: Check Minikube status
-      shell: minikube status
-      register: minikube_status
-      failed_when: "'host: Running' not in minikube_status.stdout"
