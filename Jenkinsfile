@@ -25,13 +25,24 @@ pipeline {
             steps { 
 			
  script {
-            sh '''
-            docker stop test-container || true
-            docker rm test-container || true
-            docker run --rm --name test-container -d -p 8083:8080 ridiing/cw2-server:1.0
-            sleep 5
-            curl -f http://localhost:8083 || (echo "Test failed: Container not responding!" && docker logs test-container && exit 1)
-            '''
+       		     
+		  try {
+                sh '''
+                docker stop test-container || true
+                docker rm test-container || true
+                docker run --rm --name test-container -d -p 8083:8080 ridiing/cw2-server:1.0
+                sleep 10
+                curl -f http://localhost:8083
+                '''
+                echo 'Test passed: Container is responding!'
+            } catch (Exception e) {
+                echo 'Test failed: Container not responding. Fetching logs...'
+                sh '''
+                docker logs test-container || true
+                docker inspect test-container || true
+                '''
+                error 'Container test failed!'
+            }
         }
             }
         }
