@@ -4,12 +4,12 @@
   become: yes
   tasks:
     - name: Ensure required packages are installed
-      apt:
-        name:
-          - curl
-          - docker.io
+      package:
+        name: "{{ item }}"
         state: present
-        update_cache: yes
+      loop:
+        - curl
+        - conntrack
 
     - name: Download Minikube binary
       get_url:
@@ -20,52 +20,26 @@
     - name: Delete existing Minikube cluster (if any)
       command: minikube delete --all --purge
       ignore_errors: yes
-      environment:
-        HOME: "/var/jenkins_home"
 
     - name: Set sysctl to disable fs.protected_regular
       shell: |
-        sysctl -w fs.protected_regular=0
-        echo "fs.protected_regular=0" >> /etc/sysctl.conf
-      args:
-        warn: false
+        sysctl fs.protected_regular=0
+      become: true
 
-    - name: Create Docker network for Minikube
-      shell: docker network create --driver bridge jenkins-minikube-net || true
-
-    - name: Ensure Minikube home directory exists
-      file:
-        path: "/var/jenkins_home/.minikube"
-        state: directory
-        owner: jenkins
-        group: jenkins
-        mode: "0755"
+    - name: Ensure Docker is running
+      systemd:
+        name: docker
+        state: started
+        enabled: true
 
     - name: Start Minikube
+      become: false
       shell: |
-        minikube start \
-          --driver=docker \
-          --cpus=2 \
-          --memory=2048mb \
-          --docker-opt="--network=jenkins-minikube-net" \
-          --force \
-          -v=8
+        minikube start --driver=docker --cpus=2 --memory=2048mb --docker-opt="--network=jenkins-minikube-net" --force -v=8
       environment:
         HOME: "/var/jenkins_home"
-      register: minikube_start
 
-    - name: Debug Minikube start logs if start fails
-      debug:
-        msg: "{{ minikube_start.stderr }}"
-      when: minikube_start.rc != 0
-
-    - name: Verify Minikube status
+    - name: Check Minikube status
       shell: minikube status
-      environment:
-        HOME: "/var/jenkins_home"
-
-    - name: Test Minikube control plane
-      shell: kubectl cluster-info
-      environment:
-        HOME: "/var/jenkins_home"
-      ignore_errors: yes
+      register: minikube_status
+      failed_when: "'host: Running' not in minikube_status.stdout"
