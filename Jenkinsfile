@@ -3,11 +3,12 @@ pipeline {
 
     environment {
         DOCKER_CREDENTIALS = credentials('docker-hub-credentials') // DockerHub credentials ID
-        IMAGE_NAME = 'ridiing/cw2-server'
-        IMAGE_TAG = '1.0.0'
+        DOCKER_IMAGE = 'ridiing/cw2-server'
+        DOCKER_TAG = '1.0'
     }
 
     stages {
+        // Stage 1: Checkout code from SCM
         stage('Checkout SCM') {
             steps {
                 script {
@@ -16,32 +17,38 @@ pipeline {
             }
         }
 
+        // Stage 2: Build Docker Image
         stage('Build Docker Image') {
             steps {
                 script {
-                    sh "docker build -t ${IMAGE_NAME}:${IMAGE_TAG} ."
+                    sh '''
+                    docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
+                    '''
                 }
             }
         }
 
+        // Stage 3: Push Docker Image to DockerHub
         stage('Push Docker Image') {
             steps {
                 script {
                     withDockerRegistry([credentialsId: 'docker-hub-credentials', url: '']) {
-                        sh "docker push ${IMAGE_NAME}:${IMAGE_TAG}"
+                        sh '''
+                        docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+                        '''
                     }
                 }
             }
         }
 
+        // Stage 4: Deploy Kubernetes Resources
         stage('Update Kubernetes Deployment') {
             steps {
                 script {
-                    // Update Kubernetes Deployment with the new image
-                    sh """
-                    kubectl set image deployment/cw2-app cw2-server=${IMAGE_NAME}:${IMAGE_TAG}
-                    kubectl rollout restart deployment/cw2-app
-                    """
+                    sh '''
+                    kubectl set image deployment/cw2-app cw2-server=${DOCKER_IMAGE}:${DOCKER_TAG} --record
+                    kubectl rollout status deployment/cw2-app
+                    '''
                 }
             }
         }
