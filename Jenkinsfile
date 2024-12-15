@@ -3,8 +3,6 @@ pipeline {
 
     environment {
         DOCKER_CREDENTIALS = credentials('docker-hub-credentials') // DockerHub credentials ID
-        DOCKER_IMAGE = 'ridiing/cw2-server'
-        DOCKER_TAG = '1.0'
     }
 
     stages {
@@ -22,32 +20,47 @@ pipeline {
             steps {
                 script {
                     sh '''
-                    docker build -t ${DOCKER_IMAGE}:${DOCKER_TAG} .
+                    docker build -t ridiing/cw2-server:1.0 .
                     '''
                 }
             }
         }
 
-        // Stage 3: Push Docker Image to DockerHub
+        // Stage 3: Test Docker Container
+        stage('Test Container') {
+            steps {
+                script {
+                    sh '''
+                    docker run --rm --name test-container -d -p 8081:8080 ridiing/cw2-server:1.0
+                    sleep 5  # Give the container time to start
+                    curl -f http://localhost:8081 || (echo "Container test failed!" && exit 1)
+                    docker stop test-container
+                    '''
+                }
+            }
+        }
+
+        // Stage 4: Push Docker Image to DockerHub
         stage('Push Docker Image') {
             steps {
                 script {
                     withDockerRegistry([credentialsId: 'docker-hub-credentials', url: '']) {
                         sh '''
-                        docker push ${DOCKER_IMAGE}:${DOCKER_TAG}
+                        docker push ridiing/cw2-server:1.0
                         '''
                     }
                 }
             }
         }
 
-        // Stage 4: Deploy Kubernetes Resources
-        stage('Update Kubernetes Deployment') {
+        // Stage 5: Deploy Docker Container
+        stage('Deploy Container') {
             steps {
                 script {
                     sh '''
-                    kubectl set image deployment/cw2-app cw2-server=${DOCKER_IMAGE}:${DOCKER_TAG} --record
-                    kubectl rollout status deployment/cw2-app
+                    docker stop cw2-server || true
+                    docker rm cw2-server || true
+                    docker run -d --name cw2-server -p 8081:8080 ridiing/cw2-server:1.0
                     '''
                 }
             }
