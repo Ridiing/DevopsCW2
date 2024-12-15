@@ -10,8 +10,9 @@ COPY . .
 # Install dependencies (if any are defined in package.json)
 RUN npm install
 
-# Expose the port for the application
-EXPOSE 8080
 
 # Start the application
 CMD ["node", "server.js"]
+
+#Expose port 
+EXPOSE 8080
