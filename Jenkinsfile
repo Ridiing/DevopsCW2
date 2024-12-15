@@ -46,7 +46,7 @@ pipeline {
                     sh '''
                     docker stop cw2-server || true
                     docker rm cw2-server || true
-                    docker run -d --name cw2-server -p 8080:8080 ridiing/cw2-server:1.0
+                    docker run -d --name cw2-server -p 8081:8080 ridiing/cw2-server:1.0
                     '''
                 }
             }
