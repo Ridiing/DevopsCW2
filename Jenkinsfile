@@ -29,7 +29,7 @@ pipeline {
                         sh '''
                         docker stop test-container || true
                         docker rm test-container || true
-                        docker run --rm --name test-container -d -p 8083:8080 ${DOCKER_IMAGE}
+                        docker run --rm --name test-container -d -p 8083:8080 ${env.DOCKER_IMAGE}
                         sleep 10
                         curl -f http://localhost:8083
                         '''
