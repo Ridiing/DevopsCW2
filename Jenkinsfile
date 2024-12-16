@@ -50,7 +50,7 @@ pipeline {
                 echo 'Pushing Docker Image to DockerHub...'
 		script {
 			 sh '''
-            echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
+            echo "${Sonny0908}" | docker login -u "${ridiing}" --password-stdin
             docker push ${DOCKER_IMAGE}
             '''
                 
