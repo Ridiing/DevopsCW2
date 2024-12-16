@@ -31,7 +31,8 @@ pipeline {
                         docker rm test-container || true
                         docker run --rm --name test-container -d -p 8083:8080 ${DOCKER_IMAGE}
                         sleep 10
-                        curl -f http://localhost:8083
+                         CONTAINER_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' test-container)
+                curl -f http://$CONTAINER_IP:8080
                         '''
                         echo 'Test passed: Container is responding!'
                     } catch (Exception e) {
