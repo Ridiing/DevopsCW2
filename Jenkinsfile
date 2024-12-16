@@ -11,8 +11,13 @@ pipeline {
 
         stage('Build Docker Image') {
             steps {
-                echo 'Building Docker Image...'
-                sh 'docker build -t ridiing/cw2-server:1.0 .'
+                script {
+                    def imageTag = "ridiing/cw2-server:${env.BUILD_NUMBER}" // Unique tag based on build number
+                    echo "Building Docker Image with tag: ${imageTag}..."
+                    sh "docker build -t ${imageTag} ."
+                    sh "docker push ${imageTag}"
+                    env.DOCKER_IMAGE = imageTag // Set as environment variable for later stages
+                }
             }
         }
 
@@ -20,13 +25,13 @@ pipeline {
             steps {
                 script {
                     try {
+                        echo 'Testing Docker Container...'
                         sh '''
                         docker stop test-container || true
                         docker rm test-container || true
-                        docker run --rm --name test-container -d -p 8083:8080 ridiing/cw2-server:1.0
+                        docker run --rm --name test-container -d -p 8083:8080 ${DOCKER_IMAGE}
                         sleep 10
-                        CONTAINER_IP=$(docker inspect -f '{{range.NetworkSettings.Networks}}{{.IPAddress}}{{end}}' test-container)
-                        curl -f http://$CONTAINER_IP:8080
+                        curl -f http://localhost:8083
                         '''
                         echo 'Test passed: Container is responding!'
                     } catch (Exception e) {
@@ -44,7 +49,7 @@ pipeline {
             steps {
                 echo 'Pushing Docker Image to DockerHub...'
                 withDockerRegistry([credentialsId: 'docker-hub-credentials', url: '']) {
-                    sh 'docker push ridiing/cw2-server:1.0'
+                    sh "docker push ${DOCKER_IMAGE}" // Use dynamically tagged image
                 }
             }
         }
@@ -53,7 +58,8 @@ pipeline {
             steps {
                 script {
                     echo 'Deploying to Kubernetes...'
-                    sh 'kubectl apply -f /var/jenkins_home/deployment.yaml'
+                    sh "kubectl set image deployment/cw2-app cw2-server=${DOCKER_IMAGE} --record" // Update Kubernetes deployment
+                    sh "kubectl rollout status deployment/cw2-app" // Ensure rollout completes
                 }
             }
         }
