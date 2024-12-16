@@ -48,8 +48,13 @@ pipeline {
         stage('Push Docker Image') {
             steps {
                 echo 'Pushing Docker Image to DockerHub...'
-                withDockerRegistry([credentialsId: 'docker-hub-credentials', url: '']) {
-                    sh "docker push ${DOCKER_IMAGE}" // Use dynamically tagged image
+		script {
+			 sh '''
+            echo "${DOCKER_PASSWORD}" | docker login -u "${DOCKER_USERNAME}" --password-stdin
+            docker push ${DOCKER_IMAGE}
+            '''
+                
+                 
                 }
             }
         }
